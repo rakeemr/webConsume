@@ -1,6 +1,7 @@
 # depslib dependency file v1.0
-1505594614 source:/home/raquel/Documents/Lenguajes/IProject/IProject/main.c
+1505634468 source:/home/raquel/Documents/Lenguajes/IProject/IProject/main.c
 	<stdio.h>
+	<stdlib.h>
 	<string.h>
 	<curl/curl.h>
 	<libxml/xmlmemory.h>

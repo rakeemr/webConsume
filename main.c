@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
 #include <libxml/xmlmemory.h>
@@ -22,10 +23,8 @@ struct layerData
 
 
 /*----------GLOBAL VARIABLES---------*/
-char *url = "http://test1:test1@www.idehn.tec.ac.cr/geoserver/rest/layers.xml";
+char *prefix = "http://test1:test1@";
 char *docName = "layers.txt";
-char *child = "layer";
-char *subChild = "atom";
 
 
 /*------------------------METHODS-----------------------*/
@@ -66,11 +65,10 @@ void fileUpload(char* url)
 {
     CURL *curl;
     CURLcode res;
-    char *urlCp = url;
 
     curl = curl_easy_init();
     if(curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, urlCp);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
 
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
@@ -80,7 +78,7 @@ void fileUpload(char* url)
             fprintf(stderr, "curl_easy_perform() failed: %s\n",
                     curl_easy_strerror(res));
 
-        FILE *file = fopen( "layers.txt", "w");
+        FILE *file = fopen(docName, "w");
 
         curl_easy_setopt( curl, CURLOPT_WRITEDATA, file) ;
 
@@ -132,7 +130,7 @@ void getReference (xmlDocPtr doc, xmlNodePtr cur, int pos) {
 }
 
 
-void parseDoc(char *docname, int pos) {
+void parseDoc(char *docname, char *root, char *subChild, int pos) {
 
 	xmlDocPtr doc;
 	xmlNodePtr cur;
@@ -152,7 +150,7 @@ void parseDoc(char *docname, int pos) {
 		return;
 	}
 
-	if (xmlStrcmp(cur->name, (const xmlChar *) "layers")) {
+	if (xmlStrcmp(cur->name, (const xmlChar *) root)) {
 		printf("document of the wrong type, root node different");
 		xmlFreeDoc(doc);
 		return;
@@ -161,7 +159,7 @@ void parseDoc(char *docname, int pos) {
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL)
 	{
-		if (!(xmlStrcmp(cur->name, (const xmlChar *)child)))
+		if (!(xmlStrcmp(cur->name, (const xmlChar *)subChild)))
 		{
 			getReference (doc, cur, pos);
 		}
@@ -173,13 +171,37 @@ void parseDoc(char *docname, int pos) {
 }
 
 
+void getLayerDataReference()
+{
+    struct layersRef * temp = firstLR;
+    int i = 0;
+    char *subURL;
+    while(temp->next != NULL)
+    {
+        subURL = (char *) malloc(19+strlen(temp->text));
+        char *subString = strndup(temp->text+7, strlen(temp->text)-7);
+        strcpy(subURL, prefix);
+        strcat(subURL, subString);
+        fileUpload(subURL);
+        parseDoc(docName, "layer", "resource", 1);
+        //printf("URL: %s\n", subURL);
+        printf("\n\t\t\tEND OF FILE\n\n");
+        i+=1;
+        temp = temp->next;
+    }
+}
+
 int main() {
-    //printf("Link: %s", url);
 
     //Call to the method that charge the url content to a file with all the layers.
-    //fileUpload(url);
+    fileUpload("http://test1:test1@www.idehn.tec.ac.cr/geoserver/rest/layers.xml");
 
-    //parseDoc(docName, 1);
+    parseDoc(docName, "layers", "layer", 0);
+    //printList(&firstLR);
+    printf("\n---------------------------------------------------------------\n");
+    getLayerDataReference();
+    printf("\n---------------------------------------------------------------\n");
+    printList(&firstDR);
     return 0;
 }
 
