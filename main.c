@@ -191,6 +191,23 @@ void getLayerDataReference()
     }
 }
 
+void getLayerData()
+{
+    struct layersRef * temp = firstDR;
+    int i = 0;
+    char *subURL;
+    while(temp->next != NULL)
+    {
+        subURL = (char *) malloc(19+strlen(temp->text));
+        char *subString = strndup(temp->text+7, strlen(temp->text)-7);
+        strcpy(subURL, prefix);
+        strcat(subURL, subString);
+        fileUpload(subURL);
+        i+=1;
+        temp = temp->next;
+    }
+}
+
 int main() {
 
     //Call to the method that charge the url content to a file with all the layers.
