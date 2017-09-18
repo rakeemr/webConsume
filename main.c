@@ -46,6 +46,24 @@ void fillLayerReferenceList(char *link, struct layersRef **list)
     }
 }
 
+void fillLayerDataList(char *title, char *abstract, struct layerData **list)
+{
+    struct layerData *newNode = (struct layerData*) malloc(sizeof(struct layerData));
+    newNode->title = title;
+    newNode->abstract = abstract;
+    newNode->next = NULL;
+
+    if(*list == NULL)
+        *list = newNode;
+    else
+    {
+        struct layerData *temp = *list;
+        while(temp -> next != NULL)
+            temp = temp -> next;
+        temp -> next = newNode;
+    }
+}
+
 void printList(struct layersRef **list)
 {
     if(*list == NULL)
@@ -93,26 +111,10 @@ void fileUpload(char* url)
     }
 }
 
-/*void parseNode (xmlDocPtr doc, xmlNodePtr cur, char *subchild)
-{
-	xmlChar *link;
-	cur = cur->xmlChildrenNode;
-	while (cur != NULL)
-	{
-	    if ((!xmlStrcmp(cur->name, (const xmlChar *)subchild)))
-	    {
-		    link = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-		    printf("Link: %s\n", link);
-		    xmlFree(link);
- 	    }
-        cur = cur->next;
-	}
-    return;
-}*/
 
 void getReference (xmlDocPtr doc, xmlNodePtr cur, int pos) {
 
-	xmlChar *link;
+	xmlChar * link;
 	cur = cur->xmlChildrenNode;
 
 	while (cur != NULL) {
@@ -126,6 +128,7 @@ void getReference (xmlDocPtr doc, xmlNodePtr cur, int pos) {
         }
         cur = cur->next;
 	}
+
 	return;
 }
 
@@ -191,7 +194,55 @@ void getLayerDataReference()
     }
 }
 
-void getLayerData()
+void parseDoc2(char *docname, char *root, char *subChild1, char *subChild2)
+{
+    xmlDocPtr doc;
+	xmlNodePtr cur;
+
+	doc = xmlParseFile(docname);
+
+	if (doc == NULL ) {
+		printf("Document not parsed successfully. \n");
+		return;
+	}
+
+	cur = xmlDocGetRootElement(doc);
+
+	if (cur == NULL) {
+		printf("empty document\n");
+		xmlFreeDoc(doc);
+		return;
+	}
+
+	if (xmlStrcmp(cur->name, (const xmlChar *) root)) {
+		printf("document of the wrong type, root node different");
+		xmlFreeDoc(doc);
+		return;
+	}
+
+	cur = cur->xmlChildrenNode;
+	while (cur != NULL)
+	{
+        if (!(xmlStrcmp(cur->name, (const xmlChar *)"title")))
+        {
+            xmlChar *title;
+            title = xmlNodeListGetString(doc,cur->xmlChildrenNode, 1);
+            printf("\n\tTitle: %s\n", title);
+        }
+        if (!(xmlStrcmp(cur->name, (const xmlChar *)"abstract")))
+        {
+            xmlChar *abstract;
+            abstract = xmlNodeListGetString(doc,cur->xmlChildrenNode, 1);
+            printf("\n\tAbstract: %s\n", abstract);
+        }
+
+        cur = cur->next;
+	}
+	xmlFreeDoc(doc);
+	return;
+}
+
+void getLayerConection()
 {
     struct layersRef * temp = firstDR;
     int i = 0;
@@ -203,10 +254,13 @@ void getLayerData()
         strcpy(subURL, prefix);
         strcat(subURL, subString);
         fileUpload(subURL);
+        parseDoc2(docName, "featureType", "title", "abstract");
+        printf("\n\t\t\tEND OF FILE\n\n");
         i+=1;
         temp = temp->next;
     }
 }
+
 
 int main() {
 
@@ -217,8 +271,12 @@ int main() {
     //printList(&firstLR);
     printf("\n---------------------------------------------------------------\n");
     getLayerDataReference();
+    //printf("\n---------------------------------------------------------------\n");
+    //printList(&firstDR);
+
     printf("\n---------------------------------------------------------------\n");
-    printList(&firstDR);
+    getLayerConection();
+
     return 0;
 }
 
