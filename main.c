@@ -48,7 +48,7 @@ void fillLayerReferenceList(char *link, struct layersRef **list)
 
 void fillLayerDataList(char *title, char *abstract, struct layerData **list)
 {
-    struct layerData *newNode = (struct layerData*) malloc(sizeof(struct layerData));
+    struct layerData *newNode = (struct layerData *) malloc(sizeof(struct layerData));
     newNode->title = title;
     newNode->abstract = abstract;
     newNode->next = NULL;
@@ -74,6 +74,23 @@ void printList(struct layersRef **list)
         while(temp != NULL)
         {
             printf("Link: %s\n", temp->text);
+            temp = temp -> next;
+        }
+    }
+}
+
+void printList2(struct layerData **list)
+{
+    if(*list == NULL)
+        printf("List is empty!!");
+    else
+    {
+        struct layerData * temp = *list;
+        while(temp != NULL)
+        {
+            printf("Title: %s\n", temp->title);
+            printf("Abstract: %s\n", temp->abstract);
+            printf("\t-------------------------------------------\n");
             temp = temp -> next;
         }
     }
@@ -185,16 +202,48 @@ void getLayerDataReference()
         char *subString = strndup(temp->text+7, strlen(temp->text)-7);
         strcpy(subURL, prefix);
         strcat(subURL, subString);
+
         fileUpload(subURL);
         parseDoc(docName, "layer", "resource", 1);
-        //printf("URL: %s\n", subURL);
+
         printf("\n\t\t\tEND OF FILE\n\n");
+
         i+=1;
         temp = temp->next;
     }
 }
 
-void parseDoc2(char *docname, char *root, char *subChild1, char *subChild2)
+void writeInFile(char *title, char * abstract)
+{
+    FILE * file = fopen("results.txt", "a");
+    fprintf(file,"Title: %s\n", title);
+    fprintf(file, "Abstract: %s", abstract);
+    fprintf(file, "\n\t---------------------------------------\n");
+    fclose(file);
+}
+
+void getLayerData(xmlDocPtr doc, xmlNodePtr cur, char *child1, char *child2)
+{
+    char * title;
+    char * abstract;
+    char * finalAbs;
+
+    if (!(xmlStrcmp(cur->name, (const xmlChar *)child1)))
+        title = (char *) xmlNodeListGetString(doc,cur->xmlChildrenNode, 1);
+
+    if (!(xmlStrcmp(cur->name, (const xmlChar *)child2)))
+    {
+        abstract = (char *) xmlNodeListGetString(doc,cur->xmlChildrenNode, 1);
+        char abs[strlen(abstract)];
+        strcpy(abs, abstract);
+        finalAbs = strtok(abs,"\n");
+        writeInFile(title, finalAbs);
+        //fillLayerDataList(title, subAbs, &firstLD);
+    }
+
+}
+
+void parseDoc2(char *docname, char *root, char *child1, char *child2)
 {
     xmlDocPtr doc;
 	xmlNodePtr cur;
@@ -223,21 +272,10 @@ void parseDoc2(char *docname, char *root, char *subChild1, char *subChild2)
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL)
 	{
-        if (!(xmlStrcmp(cur->name, (const xmlChar *)"title")))
-        {
-            xmlChar *title;
-            title = xmlNodeListGetString(doc,cur->xmlChildrenNode, 1);
-            printf("\n\tTitle: %s\n", title);
-        }
-        if (!(xmlStrcmp(cur->name, (const xmlChar *)"abstract")))
-        {
-            xmlChar *abstract;
-            abstract = xmlNodeListGetString(doc,cur->xmlChildrenNode, 1);
-            printf("\n\tAbstract: %s\n", abstract);
-        }
-
+        getLayerData(doc, cur,child1,child2);
         cur = cur->next;
 	}
+
 	xmlFreeDoc(doc);
 	return;
 }
@@ -247,15 +285,19 @@ void getLayerConection()
     struct layersRef * temp = firstDR;
     int i = 0;
     char *subURL;
+
     while(temp->next != NULL)
     {
         subURL = (char *) malloc(19+strlen(temp->text));
         char *subString = strndup(temp->text+7, strlen(temp->text)-7);
         strcpy(subURL, prefix);
         strcat(subURL, subString);
+
         fileUpload(subURL);
         parseDoc2(docName, "featureType", "title", "abstract");
+
         printf("\n\t\t\tEND OF FILE\n\n");
+
         i+=1;
         temp = temp->next;
     }
