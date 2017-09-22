@@ -46,23 +46,6 @@ void fillLayerReferenceList(char *link, struct layersRef **list)
     }
 }
 
-void fillLayerDataList(char *title, char *abstract, struct layerData **list)
-{
-    struct layerData *newNode = (struct layerData *) malloc(sizeof(struct layerData));
-    newNode->title = title;
-    newNode->abstract = abstract;
-    newNode->next = NULL;
-
-    if(*list == NULL)
-        *list = newNode;
-    else
-    {
-        struct layerData *temp = *list;
-        while(temp -> next != NULL)
-            temp = temp -> next;
-        temp -> next = newNode;
-    }
-}
 
 void printList(struct layersRef **list)
 {
@@ -79,22 +62,6 @@ void printList(struct layersRef **list)
     }
 }
 
-void printList2(struct layerData **list)
-{
-    if(*list == NULL)
-        printf("List is empty!!");
-    else
-    {
-        struct layerData * temp = *list;
-        while(temp != NULL)
-        {
-            printf("Title: %s\n", temp->title);
-            printf("Abstract: %s\n", temp->abstract);
-            printf("\t-------------------------------------------\n");
-            temp = temp -> next;
-        }
-    }
-}
 
 void fileUpload(char* url)
 {
@@ -105,13 +72,13 @@ void fileUpload(char* url)
     if(curl) {
         curl_easy_setopt(curl, CURLOPT_URL, url);
 
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        /*curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
 
         res = curl_easy_perform(curl);
         if(res != CURLE_OK)
             fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                    curl_easy_strerror(res));
+                    curl_easy_strerror(res));*/
 
         FILE *file = fopen(docName, "w");
 
@@ -206,7 +173,7 @@ void getLayerDataReference()
         fileUpload(subURL);
         parseDoc(docName, "layer", "resource", 1);
 
-        printf("\n\t\t\tEND OF FILE\n\n");
+        //printf("\n\t\t\tEND OF FILE\n\n");
 
         i+=1;
         temp = temp->next;
@@ -215,10 +182,28 @@ void getLayerDataReference()
 
 void writeInFile(char *title, char * abstract)
 {
-    FILE * file = fopen("results.txt", "a");
+    FILE * file = fopen("data.txt", "a");
+
     fprintf(file,"Title: %s\n", title);
-    fprintf(file, "Abstract: %s", abstract);
+    fprintf(file, "Description: %s", abstract);
     fprintf(file, "\n\t---------------------------------------\n");
+
+    fclose(file);
+}
+
+void readInFile(char *name)
+{
+    FILE * file = fopen(name, "r");
+    char line[256];
+
+    if(!file)
+        printf("\nThe document does not exist!\n");
+
+    while (EOF != fscanf(file, "%[^\n]\n", line))
+    {
+         printf("%s\n", line);
+    }
+
     fclose(file);
 }
 
@@ -238,7 +223,6 @@ void getLayerData(xmlDocPtr doc, xmlNodePtr cur, char *child1, char *child2)
         strcpy(abs, abstract);
         finalAbs = strtok(abs,"\n");
         writeInFile(title, finalAbs);
-        //fillLayerDataList(title, subAbs, &firstLD);
     }
 
 }
@@ -272,7 +256,7 @@ void parseDoc2(char *docname, char *root, char *child1, char *child2)
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL)
 	{
-        getLayerData(doc, cur,child1,child2);
+        getLayerData(doc, cur, child1, child2);
         cur = cur->next;
 	}
 
@@ -280,45 +264,160 @@ void parseDoc2(char *docname, char *root, char *child1, char *child2)
 	return;
 }
 
-void getLayerConection()
+void getLayerMetadata()
 {
     struct layersRef * temp = firstDR;
-    int i = 0;
+    int i = 7;
     char *subURL;
 
     while(temp->next != NULL)
     {
         subURL = (char *) malloc(19+strlen(temp->text));
-        char *subString = strndup(temp->text+7, strlen(temp->text)-7);
+        char *subString = strndup(temp->text+i, strlen(temp->text)-i);
         strcpy(subURL, prefix);
         strcat(subURL, subString);
 
         fileUpload(subURL);
         parseDoc2(docName, "featureType", "title", "abstract");
 
-        printf("\n\t\t\tEND OF FILE\n\n");
+        //printf("\n\t\t\tEND OF FILE\n\n");
 
-        i+=1;
         temp = temp->next;
     }
 }
 
+void printLayersList(struct layersRef ** list)
+{
+    struct layersRef * temp = * list;
+    char * layers;
+    int i = 95, j = 1;
 
-int main() {
+    if(*list == NULL)
+        printf("You need to run at least 1 time ./IProject -f before executing this option.");
 
-    //Call to the method that charge the url content to a file with all the layers.
-    fileUpload("http://test1:test1@www.idehn.tec.ac.cr/geoserver/rest/layers.xml");
+    while(temp != NULL)
+    {
+        layers = (char *) malloc(strlen(temp->text));
+        char * subLayers = strndup(temp->text+i, strlen(temp->text)-i);
+        strcpy(layers, subLayers);
 
-    parseDoc(docName, "layers", "layer", 0);
-    //printList(&firstLR);
-    printf("\n---------------------------------------------------------------\n");
-    getLayerDataReference();
-    //printf("\n---------------------------------------------------------------\n");
-    //printList(&firstDR);
+        printf("\n\t\t%i) %s\n", j, layers);
 
-    printf("\n---------------------------------------------------------------\n");
-    getLayerConection();
+        j +=1;
+        temp = temp -> next;
+    }
+}
 
+void insertLayersByInput(char *layerToAdd)
+{
+    //printf("%s\n", layerToAdd);
+    char * baseLayerDataUrl = (char *) malloc(1024);
+    strcpy(baseLayerDataUrl, "http://test1:test1@www.idehn.tec.ac.cr/geoserver/rest/workspaces/geonode/datastores/datastore/featuretypes/");
+    strcat(baseLayerDataUrl,layerToAdd);
+
+    //printf("%s\n", baseLayerDataUrl);
+
+    fileUpload(baseLayerDataUrl);
+    parseDoc2(docName, "featureType", "title", "abstract");
+}
+
+void insertInput()
+{
+
+    printf("\nWrite the layers you want to save, Separate them with [, ]: \n>");
+
+    char * layersToSave = (char *) malloc(1024);
+    strcpy(layersToSave,"");
+    scanf("%[^\n]", layersToSave);
+
+    char str[strlen(layersToSave)];
+    strcpy(str,layersToSave);
+    const char s[2] = ", ";
+    char *token;
+
+    /* get the first token */
+    token = strtok(str, s);
+
+    /* walk through other tokens */
+    while( token != NULL )
+    {
+        insertLayersByInput(token);
+        //printf( " %s\n", token );
+
+        token = strtok(NULL, s);
+    }
+
+    printf("\n\t\tPrinting file in Console...........\n");
+    readInFile("data.txt");
+}
+
+
+void menuOptions(int option)
+{
+    if(option == 1)
+    {
+        printf("\n\t\tObtaining Data.......\n");
+        fileUpload("http://test1:test1@www.idehn.tec.ac.cr/geoserver/rest/layers.xml");
+
+        parseDoc(docName, "layers", "layer", 0);
+
+        getLayerDataReference();
+        getLayerMetadata();
+        readInFile("data.txt");
+    }
+
+    if(option == 2)
+    {
+        fileUpload("http://test1:test1@www.idehn.tec.ac.cr/geoserver/rest/layers.xml");
+
+        parseDoc(docName, "layers", "layer", 0);
+
+        getLayerDataReference();
+
+        printf("\n\nThe layers are: ");
+        printLayersList(&firstDR);
+
+        remove("data.txt");
+
+        insertInput();
+
+    }
+
+
+}
+
+
+int main(int argc, char * argv[]) {
+
+    if(argc > 3)
+    {
+        printf("Usage [OPTIONS] of %s \n\t-f = ALL \n\t-p = Show results.txt content (Only if it exists)", argv[0]);
+        return 0;
+    }
+    else if (argc == 3)
+    {
+        if ((!strcmp("-f", argv[1])) || (!strcmp("-f", argv[2])))
+            menuOptions(1);
+        if ((!strcmp("-p", argv[1])) || (!strcmp("-p", argv[2])))
+        {
+            printf("\n\t\tPrinting file in Console.........\n\n");
+            readInFile("data.txt");
+        }
+    }
+    else if (argc == 2)
+    {
+        if (!strcmp("-f", argv[1]))
+            menuOptions(1);
+        if (!strcmp("-p", argv[1]))
+        {
+            printf("\n\t\tPrinting file in Console.........\n\n");
+            readInFile("data.txt");
+        }
+    }
+    else
+        menuOptions(2);
+
+    //menuOptions(1);
     return 0;
 }
 
